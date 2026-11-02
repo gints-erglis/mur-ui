@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mur</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../src/tokens.css">
+  <script type="module" src="../src/mur.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: var(--mur-color-bg);
+    }
+
+    /* Avoid a flash of unstyled content while the module loads. */
+    mur-app:not(:defined) {
+      visibility: hidden;
+    }
+
+    .brand {
+      font-size: var(--mur-font-size-m);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-inline-end: var(--mur-space-m);
+    }
+
+    button,
+    input {
+      font: inherit;
+      color: inherit;
+      border-radius: var(--mur-radius);
+      min-height: 2rem;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding-inline: var(--mur-space-m);
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled, [aria-pressed='true']) {
+      background: var(--mur-color-hover);
+    }
+
+    button:disabled {
+      color: var(--mur-color-text-muted);
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    button[aria-pressed='true'] {
+      background: var(--mur-color-accent);
+      color: var(--mur-color-on-accent);
+    }
+
+    input {
+      padding-inline: var(--mur-space-m);
+      background: var(--mur-color-bg);
+      border: 1px solid var(--mur-color-border-strong);
+    }
+
+    input::placeholder {
+      color: var(--mur-color-text-muted);
+    }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 2px solid var(--mur-color-focus);
+      outline-offset: 2px;
+    }
+
+    .theme {
+      display: flex;
+      gap: var(--mur-space-xs);
+    }
+
+    .content {
+      padding: var(--mur-space-l);
+    }
+
+    .sidebar {
+      min-height: 100%;
+      box-sizing: border-box;
+      background: var(--mur-color-surface);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 var(--mur-space-s);
+      font-size: var(--mur-font-size-m);
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0 0 var(--mur-space-m);
+      color: var(--mur-color-text-muted);
+    }
+
+    .count {
+      font-size: var(--mur-font-size-l);
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      margin-block-end: var(--mur-space-s);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+      gap: var(--mur-space-m);
+    }
+
+    .card {
+      min-height: 6rem;
+      padding: var(--mur-space-m);
+      box-sizing: border-box;
+      background: var(--mur-color-surface);
+      border: 1px solid var(--mur-color-border);
+      border-radius: var(--mur-radius-l);
+      color: var(--mur-color-text-muted);
+    }
+  </style>
+</head>
+<body>
+  <mur-app>
+    <mur-toolbar slot="toolbar" aria-label="Main">
+      <span slot="start" class="brand">Mur</span>
+
+      <button>Refresh</button>
+      <button>Filter</button>
+      <button disabled>Export</button>
+      <input type="search" placeholder="Search" aria-label="Search">
+
+      <div slot="end" class="theme" role="group" aria-label="Theme">
+        <button data-theme-choice="" aria-pressed="true">Auto</button>
+        <button data-theme-choice="light" aria-pressed="false">Light</button>
+        <button data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+    </mur-toolbar>
+
+    <mur-splitter position="26" min-start="160" min-end="200" persist="demo-sidebar" label="Resize sidebar">
+      <div slot="start" class="content sidebar">
+        <h1>Sidebar</h1>
+        <p>Drag the divider, or focus it and use the arrow keys, Home and End. The position survives a reload.</p>
+      </div>
+
+      <mur-splitter slot="end" orientation="vertical" position="70" min-start="120" min-end="80"
+        persist="demo-details" label="Resize details">
+        <mur-tabs slot="start" label="Demo views">
+          <mur-tab-panel label="Orders">
+            <div class="content">
+              <h2>Placeholder cards</h2>
+              <p>The active panel scrolls on its own.</p>
+              <div class="cards" id="cards"></div>
+            </div>
+          </mur-tab-panel>
+          <mur-tab-panel label="Live counter">
+            <div class="content">
+              <h2>Keeps running while hidden</h2>
+              <div class="count" id="count">0</div>
+              <p>Inactive panels are hidden, not removed. Switch away and back: the count has kept going.</p>
+            </div>
+          </mur-tab-panel>
+          <mur-tab-panel label="Server metrics">
+            <div class="content">
+              <h2>Placeholder</h2>
+              <p>Live metrics arrive with the data layer.</p>
+            </div>
+          </mur-tab-panel>
+        </mur-tabs>
+
+        <div slot="end" class="content">
+          <h2>Details</h2>
+          <p>A vertical splitter, nested inside the horizontal one.</p>
+        </div>
+      </mur-splitter>
+    </mur-splitter>
+
+    <mur-statusbar slot="statusbar">
+      <span slot="start" id="last-event">No events yet</span>
+      <span slot="end">No data source yet</span>
+    </mur-statusbar>
+  </mur-app>
+
+  <script type="module">
+    // Enough placeholder cards to make the panel scroll.
+    const cards = document.querySelector('#cards');
+    for (let number = 1; number <= 24; number++) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.textContent = `Placeholder ${number}`;
+      cards.append(card);
+    }
+
+    // Updates a panel's content even while that panel is hidden.
+    const count = document.querySelector('#count');
+    setInterval(() => {
+      count.textContent = String(Number(count.textContent) + 1);
+    }, 1000);
+
+    // Show the components' events in the status bar.
+    const lastEvent = document.querySelector('#last-event');
+    document.addEventListener('mur-resize', (event) => {
+      lastEvent.textContent = `mur-resize: ${event.detail.position}%`;
+    });
+    document.addEventListener('mur-tab-change', (event) => {
+      lastEvent.textContent = `mur-tab-change: tab ${event.detail.index}`;
+    });
+
+    // Theme switcher.
+    const themeButtons = document.querySelectorAll('[data-theme-choice]');
+    for (const button of themeButtons) {
+      button.addEventListener('click', () => {
+        const theme = button.dataset.themeChoice;
+        if (theme) {
+          document.documentElement.dataset.theme = theme;
+        } else {
+          delete document.documentElement.dataset.theme;
+        }
+        for (const other of themeButtons) {
+          other.setAttribute('aria-pressed', String(other === button));
+        }
+      });
+    }
+  </script>
+</body>
+</html>
