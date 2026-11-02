@@ -99,26 +99,23 @@
       color: var(--mur-color-text-muted);
     }
 
-    .count {
-      font-size: var(--mur-font-size-l);
+    /* A plain list, only to show the store working. Real views come in step 4. */
+    .rows {
+      margin: 0;
+      padding: 0;
+      list-style: none;
       font-variant-numeric: tabular-nums;
-      font-weight: 600;
-      margin-block-end: var(--mur-space-s);
     }
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-      gap: var(--mur-space-m);
+    .rows li {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--mur-space-l);
+      padding-block: var(--mur-space-s);
+      border-block-end: 1px solid var(--mur-color-border);
     }
 
-    .card {
-      min-height: 6rem;
-      padding: var(--mur-space-m);
-      box-sizing: border-box;
-      background: var(--mur-color-surface);
-      border: 1px solid var(--mur-color-border);
-      border-radius: var(--mur-radius-l);
+    .rows .muted {
       color: var(--mur-color-text-muted);
     }
   </style>
@@ -128,10 +125,11 @@
     <mur-toolbar slot="toolbar" aria-label="Main">
       <span slot="start" class="brand">Mur</span>
 
-      <button>Refresh</button>
-      <button>Filter</button>
+      <button id="pause" aria-pressed="false">Pause</button>
+      <button id="open-only" aria-pressed="false">Open only</button>
+      <button id="by-total" aria-pressed="false">Highest total</button>
       <button disabled>Export</button>
-      <input type="search" placeholder="Search" aria-label="Search">
+      <input id="search" type="search" placeholder="Search customer" aria-label="Search customer">
 
       <div slot="end" class="theme" role="group" aria-label="Theme">
         <button data-theme-choice="" aria-pressed="true">Auto</button>
@@ -151,22 +149,16 @@
         <mur-tabs slot="start" label="Demo views">
           <mur-tab-panel label="Orders">
             <div class="content">
-              <h2>Placeholder cards</h2>
-              <p>The active panel scrolls on its own.</p>
-              <div class="cards" id="cards"></div>
-            </div>
-          </mur-tab-panel>
-          <mur-tab-panel label="Live counter">
-            <div class="content">
-              <h2>Keeps running while hidden</h2>
-              <div class="count" id="count">0</div>
-              <p>Inactive panels are hidden, not removed. Switch away and back: the count has kept going.</p>
+              <h2>Fake orders</h2>
+              <p id="orders-count"></p>
+              <ul class="rows" id="orders"></ul>
             </div>
           </mur-tab-panel>
           <mur-tab-panel label="Server metrics">
             <div class="content">
-              <h2>Placeholder</h2>
-              <p>Live metrics arrive with the data layer.</p>
+              <h2>Fake metrics</h2>
+              <p>This panel keeps updating while hidden.</p>
+              <ul class="rows" id="metrics"></ul>
             </div>
           </mur-tab-panel>
         </mur-tabs>
@@ -180,25 +172,93 @@
 
     <mur-statusbar slot="statusbar">
       <span slot="start" id="last-event">No events yet</span>
-      <span slot="end">No data source yet</span>
     </mur-statusbar>
   </mur-app>
 
   <script type="module">
-    // Enough placeholder cards to make the panel scroll.
-    const cards = document.querySelector('#cards');
-    for (let number = 1; number <= 24; number++) {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.textContent = `Placeholder ${number}`;
-      cards.append(card);
+    import { Store } from '../src/data/store.js';
+    import { MockSource } from '../src/data/sources/mock.js';
+
+    const orders = new Store();
+    const metrics = new Store();
+    const ordersSource = new MockSource({ type: 'orders' });
+    const metricsSource = new MockSource({ type: 'metrics' });
+
+    const money = new Intl.NumberFormat('en', { style: 'currency', currency: 'EUR' });
+
+    /** Replaces a list's rows; each row is [main text, muted text]. */
+    function renderRows(list, rows) {
+      list.replaceChildren(...rows.map(([main, muted]) => {
+        const row = document.createElement('li');
+        const mutedText = document.createElement('span');
+        mutedText.className = 'muted';
+        mutedText.textContent = muted;
+        const mainText = document.createElement('span');
+        mainText.textContent = main;
+        row.append(mainText, mutedText);
+        return row;
+      }));
     }
 
-    // Updates a panel's content even while that panel is hidden.
-    const count = document.querySelector('#count');
-    setInterval(() => {
-      count.textContent = String(Number(count.textContent) + 1);
-    }, 1000);
+    orders.addEventListener('change', () => {
+      document.querySelector('#orders-count').textContent = `${orders.items.length} shown`;
+      renderRows(document.querySelector('#orders'), orders.items.map((order) => [
+        `${order.number} ${order.customer}`,
+        `${money.format(order.total)} · ${order.state}`,
+      ]));
+    });
+
+    metrics.addEventListener('change', () => {
+      renderRows(document.querySelector('#metrics'), metrics.items.map((metric) => [
+        metric.label,
+        `${metric.value}${metric.unit}`,
+      ]));
+    });
+
+    // Newest first, until "Highest total" is pressed.
+    const newestFirst = (a, b) => b.id - a.id;
+    const highestTotal = (a, b) => b.total - a.total;
+    orders.sorter = newestFirst;
+
+    // Toolbar buttons and search drive the store's filter and sorter.
+    const search = document.querySelector('#search');
+    const openOnly = document.querySelector('#open-only');
+
+    function updateFilter() {
+      const text = search.value.trim().toLowerCase();
+      const onlyOpen = openOnly.getAttribute('aria-pressed') === 'true';
+      orders.filter = (order) => order.customer.toLowerCase().includes(text)
+        && (!onlyOpen || order.state !== 'completed');
+    }
+
+    /** Flips a toggle button, and returns its new state. */
+    function toggle(button) {
+      const pressed = button.getAttribute('aria-pressed') !== 'true';
+      button.setAttribute('aria-pressed', String(pressed));
+      return pressed;
+    }
+
+    search.addEventListener('input', updateFilter);
+    openOnly.addEventListener('click', () => {
+      toggle(openOnly);
+      updateFilter();
+    });
+    document.querySelector('#by-total').addEventListener('click', (event) => {
+      orders.sorter = toggle(event.currentTarget) ? highestTotal : newestFirst;
+    });
+    document.querySelector('#pause').addEventListener('click', (event) => {
+      if (toggle(event.currentTarget)) {
+        ordersSource.stop();
+        metricsSource.stop();
+      } else {
+        ordersSource.start(orders);
+        metricsSource.start(metrics);
+      }
+    });
+
+    document.querySelector('mur-statusbar').source = ordersSource;
+    ordersSource.start(orders);
+    metricsSource.start(metrics);
 
     // Show the components' events in the status bar.
     const lastEvent = document.querySelector('#last-event');

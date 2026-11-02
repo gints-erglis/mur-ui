@@ -19,6 +19,7 @@
   --mur-color-accent: #4b3fb5;
   --mur-color-on-accent: #ffffff;
   --mur-color-focus: #4b3fb5;
+  --mur-color-success: #1a7f4b;
 
   /* Spacing */
   --mur-space-xs: 0.25rem;
@@ -57,6 +58,7 @@
     --mur-color-accent: #a79bff;
     --mur-color-on-accent: #14121f;
     --mur-color-focus: #a79bff;
+    --mur-color-success: #4cc38a;
   }
 }
 
@@ -72,4 +74,5 @@
   --mur-color-accent: #a79bff;
   --mur-color-on-accent: #14121f;
   --mur-color-focus: #a79bff;
+  --mur-color-success: #4cc38a;
 }
