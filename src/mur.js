@@ -12,3 +12,4 @@ import './components/mur-panel.js';
 import './components/mur-stat.js';
 import './components/mur-meter.js';
 import './components/mur-notifications.js';
+import './components/mur-theme-switch.js';

@@ -6,6 +6,13 @@
   <title>Mur</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="../src/tokens.css">
+  <!-- The remembered theme before the page is drawn (see mur-theme-switch.js). -->
+  <script>
+    try {
+      const theme = localStorage.getItem('mur-theme');
+      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
   <script type="module" src="../src/mur.js"></script>
   <style>
     body {
@@ -72,11 +79,6 @@
       outline-offset: 2px;
     }
 
-    .theme {
-      display: flex;
-      gap: var(--mur-space-xs);
-    }
-
     .content {
       padding: var(--mur-space-l);
     }
@@ -123,11 +125,7 @@
       <button disabled>Export</button>
       <input id="search" type="search" placeholder="Search customer" aria-label="Search customer">
 
-      <div slot="end" class="theme" role="group" aria-label="Theme">
-        <button data-theme-choice="" aria-pressed="true">Auto</button>
-        <button data-theme-choice="light" aria-pressed="false">Light</button>
-        <button data-theme-choice="dark" aria-pressed="false">Dark</button>
-      </div>
+      <mur-theme-switch slot="end"></mur-theme-switch>
     </mur-toolbar>
 
     <mur-splitter position="26" min-start="160" min-end="200" persist="demo-sidebar" label="Resize sidebar">
@@ -293,22 +291,9 @@
     document.addEventListener('mur-tab-change', (event) => {
       lastEvent.textContent = `mur-tab-change: tab ${event.detail.index}`;
     });
-
-    // Theme switcher.
-    const themeButtons = document.querySelectorAll('[data-theme-choice]');
-    for (const button of themeButtons) {
-      button.addEventListener('click', () => {
-        const theme = button.dataset.themeChoice;
-        if (theme) {
-          document.documentElement.dataset.theme = theme;
-        } else {
-          delete document.documentElement.dataset.theme;
-        }
-        for (const other of themeButtons) {
-          other.setAttribute('aria-pressed', String(other === button));
-        }
-      });
-    }
+    document.addEventListener('mur-theme-change', (event) => {
+      lastEvent.textContent = `mur-theme-change: ${event.detail.theme}`;
+    });
   </script>
 </body>
 </html>
