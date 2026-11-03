@@ -12,7 +12,9 @@
  * Events:
  * - `status`: `status` or `lastUpdate` changed.
  *
- * Order records: `{ id, number, customer, total, state, created }`.
+ * Order records: `{ id, number, customer, total, currency, state, placed }`,
+ * where `state` is `draft`, `completed`, or `canceled`, and `placed` is in
+ * seconds since 1970.
  * Metric records: `{ id, label, value, unit }`. Services have a text value.
  *
  * @example
@@ -24,7 +26,6 @@
 /** @typedef {{ changed: any[], removed: unknown[] }} Tick */
 
 const MAX_ORDERS = 30;
-const ORDER_STATES = ['new', 'processing', 'completed'];
 const CUSTOMERS = ['Anna Ozola', 'Jānis Bērziņš', 'Līga Kalniņa', 'Mārtiņš Liepa', 'Rūta Krūmiņa'];
 const SERVICES = ['nginx', 'php-fpm', 'mariadb'];
 
@@ -46,14 +47,15 @@ function createOrder(id) {
     number: `#${1000 + id}`,
     customer: pick(CUSTOMERS),
     total: Math.round(Math.random() * 30000) / 100,
-    state: 'new',
-    created: new Date().toISOString(),
+    currency: 'EUR',
+    state: 'draft',
+    placed: Math.floor(Date.now() / 1000),
   };
 }
 
 /**
- * Each tick brings a new order, moves another one forward, and drops the oldest
- * above the limit.
+ * Each tick brings a new order, finishes an open one, and drops the oldest above
+ * the limit.
  * @param {Map<unknown, any>} records
  * @returns {Tick}
  */
@@ -62,11 +64,10 @@ function tickOrders(records) {
   const nextId = ids.length ? Math.max(...ids) + 1 : 1;
   const changed = [createOrder(nextId)];
 
-  const open = [...records.values()].filter((order) => order.state !== 'completed');
+  const open = [...records.values()].filter((order) => order.state === 'draft');
   if (open.length) {
-    const order = pick(open);
-    const state = ORDER_STATES[ORDER_STATES.indexOf(order.state) + 1];
-    changed.push({ ...order, state });
+    const state = Math.random() < 0.9 ? 'completed' : 'canceled';
+    changed.push({ ...pick(open), state });
   }
 
   const removed = ids.length >= MAX_ORDERS ? [Math.min(...ids)] : [];

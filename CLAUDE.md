@@ -33,7 +33,8 @@ Mur. Because the dashboard is served from the same origin as Drupal:
 First real use cases:
 
 1. **Drupal Commerce order dashboard**: shows incoming orders and refreshes itself.
-   Starts with polling Drupal JSON:API, may later switch to Server-Sent Events.
+   Starts with polling a small Drupal endpoint, may later switch to Server-Sent
+   Events. Each Drupal project gets a copy of Mur's files inside its own module.
 2. **IRBE server monitor**: shows live server metrics (CPU, memory, disks, services)
    streamed via Server-Sent Events.
 
@@ -130,8 +131,10 @@ data source  ──►  Store  ──(change event)──►  components
   ```
   Planned sources:
   - `MockSource`: generates fake records on a timer (used by the demo).
-  - `PollingSource`: fetches a URL every N seconds, merges changed records.
-    For Drupal JSON:API, filter by the `changed` field since the last fetch.
+  - `PollingSource`: fetches a URL repeatedly, merges changed records. The server
+    answers `{ records, now }` and gets `now` back as the `since` parameter. For
+    Drupal, a small module (e.g. `mur_dashboard`) provides this endpoint instead
+    of enabling JSON:API site-wide, and returns only the fields the view needs.
   - `SseSource`: wraps `EventSource`, updates the store on each message.
 - Components receive a store through a property (`grid.store = ordersStore`) and
   listen for `change`.
@@ -175,8 +178,8 @@ Work in this order. Finish and demo each step before starting the next.
 3. Status bar shows connection status and last update time from the source.
 
 ### Step 4 — First real views
-1. Orders view (simple list or table) bound to a store, fed by `MockSource`,
-   then by `PollingSource` against Drupal JSON:API.
+1. Orders view (`<mur-table>` bound to a store), fed by `MockSource`, then by
+   `PollingSource` against the Drupal endpoint.
 2. Server metrics view fed by `SseSource`.
 
 Later (only when needed): data grid with virtualization, tree, combobox, form fields

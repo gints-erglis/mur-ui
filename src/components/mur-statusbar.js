@@ -8,8 +8,8 @@
  * should be announced.
  *
  * Properties:
- * - `source`: a data source. When set, the bar shows its connection status and
- *   last update time on the right. `null` (default) hides them.
+ * - `source`: a data source. When set, the bar shows its connection status, any
+ *   error, and the last update time on the right. `null` (default) hides them.
  *
  * Slots:
  * - `start`: left side.
@@ -121,11 +121,13 @@ export class MurStatusbar extends HTMLElement {
       return;
     }
 
-    const { status, lastUpdate } = this.#source;
+    const { status, lastUpdate, error } = this.#source;
     const online = status === 'online';
     root.querySelector('.dot').classList.toggle('online', online);
+    const state = online ? 'Online' : 'Offline';
+    const reason = error ? ` (${error})` : '';
     const time = lastUpdate ? `updated ${lastUpdate.toLocaleTimeString()}` : 'no updates yet';
-    root.querySelector('.text').textContent = `${online ? 'Online' : 'Offline'} · ${time}`;
+    root.querySelector('.text').textContent = `${state}${reason} · ${time}`;
   };
 }
 

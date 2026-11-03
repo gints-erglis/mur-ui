@@ -26,6 +26,7 @@
  *   stop(): void,
  *   status: 'online' | 'offline',
  *   lastUpdate: Date | null,
+ *   error?: string | null,
  * }} DataSource
  *
  * Dispatches a `status` event when `status` or `lastUpdate` changes.

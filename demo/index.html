@@ -81,6 +81,17 @@
       padding: var(--mur-space-l);
     }
 
+    .board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+      gap: var(--mur-space-m);
+    }
+
+    .stack {
+      display: grid;
+      gap: var(--mur-space-l);
+    }
+
     .sidebar {
       min-height: 100%;
       box-sizing: border-box;
@@ -99,25 +110,6 @@
       color: var(--mur-color-text-muted);
     }
 
-    /* A plain list, only to show the store working. Real views come in step 4. */
-    .rows {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .rows li {
-      display: flex;
-      justify-content: space-between;
-      gap: var(--mur-space-l);
-      padding-block: var(--mur-space-s);
-      border-block-end: 1px solid var(--mur-color-border);
-    }
-
-    .rows .muted {
-      color: var(--mur-color-text-muted);
-    }
   </style>
 </head>
 <body>
@@ -148,17 +140,28 @@
         persist="demo-details" label="Resize details">
         <mur-tabs slot="start" label="Demo views">
           <mur-tab-panel label="Orders">
-            <div class="content">
-              <h2>Fake orders</h2>
-              <p id="orders-count"></p>
-              <ul class="rows" id="orders"></ul>
-            </div>
+            <mur-table id="orders" label="Fake orders" empty-text="No matching orders"></mur-table>
           </mur-tab-panel>
           <mur-tab-panel label="Server metrics">
-            <div class="content">
-              <h2>Fake metrics</h2>
-              <p>This panel keeps updating while hidden.</p>
-              <ul class="rows" id="metrics"></ul>
+            <mur-table id="metrics" label="Fake server metrics"></mur-table>
+          </mur-tab-panel>
+          <mur-tab-panel label="Dashboard parts">
+            <div class="content board">
+              <mur-panel label="Stats">
+                <div class="content stack">
+                  <mur-stat label="Orders today" value="12" detail="€1,284.50 in total"></mur-stat>
+                  <mur-stat id="cpu-stat" label="CPU load"></mur-stat>
+                </div>
+              </mur-panel>
+              <mur-panel label="Meters">
+                <button slot="actions" id="notify">Notify</button>
+                <div class="content stack">
+                  <mur-meter id="cpu-meter" label="CPU"></mur-meter>
+                  <mur-meter label="Normal" value="40"></mur-meter>
+                  <mur-meter label="High" value="85" value-text="85 of 100 GB"></mur-meter>
+                  <mur-meter label="Critical" value="95"></mur-meter>
+                </div>
+              </mur-panel>
             </div>
           </mur-tab-panel>
         </mur-tabs>
@@ -169,6 +172,8 @@
         </div>
       </mur-splitter>
     </mur-splitter>
+
+    <mur-notifications></mur-notifications>
 
     <mur-statusbar slot="statusbar">
       <span slot="start" id="last-event">No events yet</span>
@@ -184,35 +189,55 @@
     const ordersSource = new MockSource({ type: 'orders' });
     const metricsSource = new MockSource({ type: 'metrics' });
 
-    const money = new Intl.NumberFormat('en', { style: 'currency', currency: 'EUR' });
+    const ordersTable = document.querySelector('#orders');
+    ordersTable.columns = [
+      { key: 'number', label: 'Order' },
+      { key: 'customer', label: 'Customer' },
+      { key: 'state', label: 'State' },
+      {
+        label: 'Placed',
+        format: (order) => new Date(order.placed * 1000).toLocaleTimeString(),
+      },
+      {
+        label: 'Total',
+        align: 'end',
+        format: (order) => new Intl.NumberFormat('en', {
+          style: 'currency',
+          currency: order.currency,
+        }).format(order.total),
+      },
+    ];
+    ordersTable.store = orders;
 
-    /** Replaces a list's rows; each row is [main text, muted text]. */
-    function renderRows(list, rows) {
-      list.replaceChildren(...rows.map(([main, muted]) => {
-        const row = document.createElement('li');
-        const mutedText = document.createElement('span');
-        mutedText.className = 'muted';
-        mutedText.textContent = muted;
-        const mainText = document.createElement('span');
-        mainText.textContent = main;
-        row.append(mainText, mutedText);
-        return row;
-      }));
-    }
+    const metricsTable = document.querySelector('#metrics');
+    metricsTable.columns = [
+      { key: 'label', label: 'Metric' },
+      {
+        label: 'Value',
+        align: 'end',
+        format: (metric) => `${metric.value}${metric.unit}`,
+      },
+    ];
+    metricsTable.store = metrics;
 
-    orders.addEventListener('change', () => {
-      document.querySelector('#orders-count').textContent = `${orders.items.length} shown`;
-      renderRows(document.querySelector('#orders'), orders.items.map((order) => [
-        `${order.number} ${order.customer}`,
-        `${money.format(order.total)} · ${order.state}`,
-      ]));
-    });
-
+    // Dashboard parts: the fake CPU value drives a meter and a trend line.
+    const cpuHistory = [];
     metrics.addEventListener('change', () => {
-      renderRows(document.querySelector('#metrics'), metrics.items.map((metric) => [
-        metric.label,
-        `${metric.value}${metric.unit}`,
-      ]));
+      const cpu = metrics.items.find((metric) => metric.id === 'cpu');
+      cpuHistory.push(cpu.value);
+      cpuHistory.splice(0, cpuHistory.length - 30);
+      document.querySelector('#cpu-meter').value = cpu.value;
+      const stat = document.querySelector('#cpu-stat');
+      stat.value = `${cpu.value}%`;
+      stat.detail = `Highest recently: ${Math.max(...cpuHistory)}%`;
+      stat.trend = [...cpuHistory];
+    });
+    document.querySelector('#notify').addEventListener('click', () => {
+      document.querySelector('mur-notifications').notify({
+        title: 'New order #1042',
+        message: '€57.49',
+        href: '#',
+      });
     });
 
     // Newest first, until "Highest total" is pressed.
@@ -228,7 +253,7 @@
       const text = search.value.trim().toLowerCase();
       const onlyOpen = openOnly.getAttribute('aria-pressed') === 'true';
       orders.filter = (order) => order.customer.toLowerCase().includes(text)
-        && (!onlyOpen || order.state !== 'completed');
+        && (!onlyOpen || order.state === 'draft');
     }
 
     /** Flips a toggle button, and returns its new state. */

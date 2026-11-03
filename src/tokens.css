@@ -20,6 +20,8 @@
   --mur-color-on-accent: #ffffff;
   --mur-color-focus: #4b3fb5;
   --mur-color-success: #1a7f4b;
+  --mur-color-warning: #b7791f;
+  --mur-color-danger: #c0362c;
 
   /* Spacing */
   --mur-space-xs: 0.25rem;
@@ -59,6 +61,8 @@
     --mur-color-on-accent: #14121f;
     --mur-color-focus: #a79bff;
     --mur-color-success: #4cc38a;
+    --mur-color-warning: #e5a93a;
+    --mur-color-danger: #f0635a;
   }
 }
 
@@ -75,4 +79,6 @@
   --mur-color-on-accent: #14121f;
   --mur-color-focus: #a79bff;
   --mur-color-success: #4cc38a;
+  --mur-color-warning: #e5a93a;
+  --mur-color-danger: #f0635a;
 }
